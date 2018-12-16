@@ -83,110 +83,151 @@ class SklearnTrainer(object):
             print(self.best_params, file=params_file)   
 
 if __name__ == '__main__':
-    print('All models done!\n')
-    #These models still need to evaluated (binary dev results)
-    #If you finish running them, please move them to the block after the 
-    #next comment.
+    data = read_dataset_splits(reader=data_readers.read_question_and_response_data)
+    texts = ['response']
     
-    ##########################################################################
-    #Anything following this has been run already (binary dev results):
+    # SVM + response text
+    print("SVM + response text")
+    model = models.MultiTextSVM(texts)
+    trainer = SklearnTrainer(model, data_name="question_and_response", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    # LR + response text
+    print("LR + response text")
+    model = models.MultiTextLogistic(texts)
+    trainer = SklearnTrainer(model, data_name="question_and_response", n_samples=5)
+    trainer.train(data.train, data.dev)
+
+    
+    data = DotDict()
+    
+    # Get questions features
+    q_length = read_dataset_splits(reader=data_readers.read_question_only_data)
+    q_length = add_question_length(q_length)
+    q_duration = read_dataset_splits(reader=data_readers.read_question_and_duration_data)
+    q_context = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=5, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=True)
+    
+    for key in Config.SPLITS:
+        arr = [q_length[key], q_duration[key], q_context[key]]
+        data[key] = reduce(lambda left,right: pd.merge(left,right,left_index=True, right_index=True), arr)
+    
+    window_size = 5
+    texts = ["turn_text-%d" % i for i in range(1, window_size+1)]    
+    scalars = ["turn_time-%d" % i for i in range(1, window_size+1)]
+    scalars += ["question_length", "question_duration_sec"]
+    
+    # SVM 
+    print("SVM ")
+    model = models.MultiTextSVMWithScalars(texts, scalars)
+    trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime_ctext", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    # LR 
+    print("LR ")
+    model = models.MultiTextLogisticWithScalars(texts, scalars)
+    trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime_ctext", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    # SVM Q+D
+    print("SVM Q+D")
+    model = models.SVMWithScalars(scalars)
+    trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    # LR Q+D
+    print("LR Q+D")
+    model = models.LogisticWithScalars(scalars)
+    trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime", n_samples=5)
+    trainer.train(data.train, data.dev)
+
+    scalars = ["turn_time-%d" % i for i in range(1, window_size+1)]
+    scalars += ["question_length"]
+    
+    # SVM Q+L    
+    print("SVM Q+L")
+    model = models.SVMWithScalars(scalars)
+    trainer = SklearnTrainer(model, data_name="combined_length_ctime", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    # LR Q+L
+    print("LR Q+L")
+    model = models.LogisticWithScalars(scalars)
+    trainer = SklearnTrainer(model, data_name="combined_length_ctime", n_samples=5)
+    trainer.train(data.train, data.dev)
+
+    
+    data = read_dataset_splits(reader=data_readers.read_label_counts_data)
+    
+    # Label counts SVM
+    print("Label counts SVM")
+    model = models.SVMVector("label_counts")
+    trainer = SklearnTrainer(model, data_name="label_counts", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    # Label counts LR
+    print("Label counts LR")
+    model = models.LogisticVector("label_counts")
+    trainer = SklearnTrainer(model, data_name="label_counts", n_samples=5)
+    trainer.train(data.train, data.dev)
+
+    
+    data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=5, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
+    
+    # Q+X models with different window sizes
+    for window_size in [1,3,5]:
+        texts = ["turn_text-%d" % i for i in range(1, window_size+1)]
         
-    #data = read_dataset_splits(reader=data_readers.read_question_and_response_data)
-    #texts = ['response']
-    #model = models.MultiTextSVM(texts)
-    #trainer = SklearnTrainer(model, data_name="question_and_response", n_samples=5)
-    #trainer.train(data.train, data.dev)
-    #model = models.MultiTextLogistic(texts)
-    #trainer = SklearnTrainer(model, data_name="question_and_response", n_samples=5)
-    #trainer.train(data.train, data.dev)
+        print("SVM Q+X with window size of " + str(i))
+        model = models.MultiTextSVM(texts)
+        trainer = SklearnTrainer(model, data_name="question_and_context_text_%d" % window_size, n_samples=5)
+        trainer.train(data.train, data.dev)
+        
+
+        print("LR Q+X with window size of " + str(i))
+        model = models.MultiTextLogistic(texts)
+        trainer = SklearnTrainer(model, data_name="question_and_context_text_%d" % window_size, n_samples=5)
+        trainer.train(data.train, data.dev)
 
     
-    #data = DotDict()
-    #q_length = read_dataset_splits(reader=data_readers.read_question_only_data)
-    #q_length = add_question_length(q_length)
-    #q_duration = read_dataset_splits(reader=data_readers.read_question_and_duration_data)
-    #q_context = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=5, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=True)
-    #for key in Config.SPLITS:
-    #    arr = [q_length[key], q_duration[key], q_context[key]]
-    #    data[key] = reduce(lambda left,right: pd.merge(left,right,left_index=True, right_index=True), arr)
+    data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=5, include_question_text=True, include_context_text=False, include_context_speaker=False, include_context_times=True)
     
-    #window_size = 5
-    #texts = ["turn_text-%d" % i for i in range(1, window_size+1)]    
-    #scalars = ["turn_time-%d" % i for i in range(1, window_size+1)]
-    #scalars += ["question_length", "question_duration_sec"]
-    #model = models.MultiTextSVMWithScalars(texts, scalars)
-    #trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime_ctext", n_samples=5)
-    #trainer.train(data.train, data.dev)
-    #model = models.MultiTextLogisticWithScalars(texts, scalars)
-    #trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime_ctext", n_samples=5)
-    #trainer.train(data.train, data.dev)
-    
-    #model = models.SVMWithScalars(scalars)
-    #trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime", n_samples=5)
-    #trainer.train(data.train, data.dev)
-    #model = models.LogisticWithScalars(scalars)
-    #trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime", n_samples=5)
-    #trainer.train(data.train, data.dev)
-
-    #scalars = ["turn_time-%d" % i for i in range(1, window_size+1)]
-    #scalars += ["question_length"]
-    #model = models.SVMWithScalars(scalars)
-    #trainer = SklearnTrainer(model, data_name="combined_length_ctime", n_samples=5)
-    #trainer.train(data.train, data.dev)
-    #model = models.LogisticWithScalars(scalars)
-    #trainer = SklearnTrainer(model, data_name="combined_length_ctime", n_samples=5)
-    #trainer.train(data.train, data.dev)
+    # Q+T models with different window sizes
+    for window_size in [1,3,5]:
+        times = ["turn_time-%d" % i for i in range(1, window_size+1)]
+        
+        print("SVM Q+T with window size of " + str(i))
+        model = models.SVMWithScalars(times)
+        trainer = SklearnTrainer(model, data_name="question_and_context_time_%d" % window_size, n_samples=5)
+        trainer.train(data.train, data.dev)
+        
+        print("LR Q+T with window size of " + str(i))
+        model = models.LogisticWithScalars(times)
+        trainer = SklearnTrainer(model, data_name="question_and_context_time_%d" % window_size, n_samples=5)
+        trainer.train(data.train, data.dev)
 
     
-    #data = read_dataset_splits(reader=data_readers.read_label_counts_data)
-    #model = models.SVMVector("label_counts")
-    #trainer = SklearnTrainer(model, data_name="label_counts", n_samples=5)
-    #trainer.train(data.train, data.dev)
-    #model = models.LogisticVector("label_counts")
-    #trainer = SklearnTrainer(model, data_name="label_counts", n_samples=5)
-    #trainer.train(data.train, data.dev)
-
+    data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
+    data = add_jensen_shannon(data)
     
-    #data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=5, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
-    #for window_size in [1,3,5]:
-    #    texts = ["turn_text-%d" % i for i in range(1, window_size+1)]
-    #    model = models.MultiTextSVM(texts)
-    #    trainer = SklearnTrainer(model, data_name="question_and_context_text_%d" % window_size, n_samples=5)
-    #    trainer.train(data.train, data.dev)
-    #    model = models.MultiTextLogistic(texts)
-    #    trainer = SklearnTrainer(model, data_name="question_and_context_text_%d" % window_size, n_samples=5)
-    #    trainer.train(data.train, data.dev)
-
+    print("SVM Q+E using Jensen-Shannon divergence")
+    trainer = SklearnTrainer(models.LogisticWithScalar("jensen_shannon"), data_name="question_and_js", n_samples=5)
+    trainer.train(data.train, data.dev)
     
-    #data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=5, include_question_text=True, include_context_text=False, include_context_speaker=False, include_context_times=True)
-    #for window_size in [1,3,5]:
-    #    times = ["turn_time-%d" % i for i in range(1, window_size+1)]
-    #    model = models.SVMWithScalars(times)
-    #    trainer = SklearnTrainer(model, data_name="question_and_context_time_%d" % window_size, n_samples=5)
-    #    trainer.train(data.train, data.dev)
-    #    model = models.LogisticWithScalars(times)
-    #    trainer = SklearnTrainer(model, data_name="question_and_context_time_%d" % window_size, n_samples=5)
-    #    trainer.train(data.train, data.dev)
-
-    
-    #data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
-    #data = add_jensen_shannon(data)
-    #trainer = SklearnTrainer(models.LogisticWithScalar("jensen_shannon"), data_name="question_and_js", n_samples=5)
-    #trainer.train(data.train, data.dev)
-    #trainer = SklearnTrainer(models.SVMWithScalar("jensen_shannon"), data_name="question_and_js", n_samples=5)
-    #trainer.train(data.train, data.dev)
+    print("LR Q+E using Jensen-Shannon divergence")
+    trainer = SklearnTrainer(models.SVMWithScalar("jensen_shannon"), data_name="question_and_js", n_samples=5)
+    trainer.train(data.train, data.dev)
     
     
-    #df = read_corpus(split='train')
-    #all_words = [item for sublist in df.text for item in sublist]
-    #for N_words in [25, 50, 100]:
-    #    top_words = [item[0] for item in Counter(all_words).most_common(N_words)]
-    #    data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
-    #    data = add_jensen_shannon(data, stopwords=top_words)
-    #    trainer = SklearnTrainer(models.LogisticWithScalar("jensen_shannon"), data_name="question_and_js_top" + str(N_words), n_samples=5)
-    #    trainer.train(data.train, data.dev)
-    #    trainer = SklearnTrainer(models.SVMWithScalar("jensen_shannon"), data_name="question_and_js_top" + str(N_words), n_samples=5)
-    #    trainer.train(data.train, data.dev)
+    df = read_corpus(split='train')
+    all_words = [item for sublist in df.text for item in sublist]
+    for N_words in [25, 50, 100]:
+        top_words = [item[0] for item in Counter(all_words).most_common(N_words)]
+        data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
+        data = add_jensen_shannon(data, stopwords=top_words)
+        trainer = SklearnTrainer(models.LogisticWithScalar("jensen_shannon"), data_name="question_and_js_top" + str(N_words), n_samples=5)
+        trainer.train(data.train, data.dev)
+        trainer = SklearnTrainer(models.SVMWithScalar("jensen_shannon"), data_name="question_and_js_top" + str(N_words), n_samples=5)
+        trainer.train(data.train, data.dev)
      
     
     #data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
@@ -258,4 +299,5 @@ if __name__ == '__main__':
     #trainer.train(data.train, data.dev)
     #trainer = SklearnTrainer(models.Dummy, data_name="question_only", n_samples=1)
     #trainer.train(data.train, data.dev)
-
+    
+    print('All models done!\n')
