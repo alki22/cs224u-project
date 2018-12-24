@@ -66,7 +66,7 @@ def run_baselines(data):
     print("Logistic Regression: ")
     print(best_grid)
     print(report)
-    plot_cm(cm, title="Logistic Regression")
+    plot_cm(cm, filename="Logistic Regression")
     models['Logistic Regression'] = best_grid
 
 #    #Linear SVM
@@ -101,7 +101,7 @@ def run_baselines(data):
     print("Linear SVM: ")
     print(best_grid)
     print(report)
-    plot_cm(cm, title="Linear SVM")
+    plot_cm(cm, filename="Linear SVM")
     models['Linear SVM'] = best_grid
 
     #Dummy
@@ -117,7 +117,7 @@ def run_baselines(data):
     report = classification_report(dev['question_class'], preds)
     print(report)
     cm = confusion_matrix(dev['question_class'], preds)
-    plot_cm(cm, title="Dummy Classifier")
+    plot_cm(cm, filename="Random Classifier")
 
     return models
 
