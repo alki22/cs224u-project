@@ -7,6 +7,7 @@ import random
 
 from collections import Counter
 from config import Config
+from console import log_info
 from data_readers import read_dataset_splits, read_corpus
 from dotdict import DotDict
 from functools import reduce
@@ -88,12 +89,12 @@ if __name__ == '__main__':
 
     # Question text + Response Text (A) Models
 
-    print("SVM Q+A")
+    log_info("Running SVM Q+A")
     model = models.MultiTextSVM(texts)
     trainer = SklearnTrainer(model, data_name="question_and_response", n_samples=5)
     trainer.train(data.train, data.dev)
     
-    print("LR Q+A")
+    log_info("Running LR Q+A")
     model = models.MultiTextLogistic(texts)
     trainer = SklearnTrainer(model, data_name="question_and_response", n_samples=5)
     trainer.train(data.train, data.dev)
@@ -117,12 +118,12 @@ if __name__ == '__main__':
     
     # Question text + Question duration, length, previous turns text and times (Q+T+L+D+X)
 
-    print("SVM Q+T+L+D+X")
+    log_info("Running SVM Q+T+L+D+X")
     model = models.MultiTextSVMWithScalars(texts, scalars)
     trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime_ctext", n_samples=5)
     trainer.train(data.train, data.dev)
 
-    print("LR Q+T+L+D+X")
+    log_info("Running LR Q+T+L+D+X")
     model = models.MultiTextLogisticWithScalars(texts, scalars)
     trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime_ctext", n_samples=5)
     trainer.train(data.train, data.dev)
@@ -158,12 +159,12 @@ if __name__ == '__main__':
 
     data = read_dataset_splits(reader=data_readers.read_label_counts_data)
 
-    print("Label counts SVM")
+    log_info("Running Label counts SVM")
     model = models.SVMVector("label_counts")
     trainer = SklearnTrainer(model, data_name="label_counts", n_samples=5)
     trainer.train(data.train, data.dev)
 
-    print("Label counts LR")
+    log_info("Running Label counts LR")
     model = models.LogisticVector("label_counts")
     trainer = SklearnTrainer(model, data_name="label_counts", n_samples=5)
     trainer.train(data.train, data.dev)
@@ -176,13 +177,13 @@ if __name__ == '__main__':
     for window_size in [5]:
         texts = ["turn_text-%d" % i for i in range(1, window_size+1)]
         
-        print("SVM Q+X with window size of %d" % window_size)
+        log_info("Running SVM Q+X with window size of %d" % window_size)
         model = models.MultiTextSVM(texts)
         trainer = SklearnTrainer(model, data_name="question_and_context_text_%d" % window_size, n_samples=5)
         trainer.train(data.train, data.dev)
         
 
-        print("LR Q+X with window size of %d" % window_size)
+        log_info("Running LR Q+X with window size of %d" % window_size)
         model = models.MultiTextLogistic(texts)
         trainer = SklearnTrainer(model, data_name="question_and_context_text_%d" % window_size, n_samples=5)
         trainer.train(data.train, data.dev)
@@ -195,12 +196,12 @@ if __name__ == '__main__':
     for window_size in [5]:
         times = ["turn_time-%d" % i for i in range(1, window_size+1)]
         
-        print("SVM Q+T with window size of %d" % window_size)
+        log_info("Running SVM Q+T with window size of %d" % window_size)
         model = models.SVMWithScalars(times)
         trainer = SklearnTrainer(model, data_name="question_and_context_time_%d" % window_size, n_samples=5)
         trainer.train(data.train, data.dev)
         
-        print("LR Q+T with window size of %d" % window_size)
+        log_info("Running LR Q+T with window size of %d" % window_size)
         model = models.LogisticWithScalars(times)
         trainer = SklearnTrainer(model, data_name="question_and_context_time_%d" % window_size, n_samples=5)
         trainer.train(data.train, data.dev)
@@ -226,10 +227,10 @@ if __name__ == '__main__':
         top_words = [item[0] for item in Counter(all_words).most_common(N_words)]
         data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
         data = add_jensen_shannon(data, stopwords=top_words)
-        print("LR Q+E using Jensen-Shannon divergence with %d most common words" % N_words)
+        log_info("Running LR Q+E using Jensen-Shannon divergence with %d most common words" % N_words)
         trainer = SklearnTrainer(models.LogisticWithScalar("jensen_shannon"), data_name="question_and_js_top" + str(N_words), n_samples=5)
         trainer.train(data.train, data.dev)
-        print("SVM Q+E using Jensen-Shannon divergence with %d most common words" % N_words)
+        log_info("Running SVM Q+E using Jensen-Shannon divergence with %d most common words" % N_words)
         trainer = SklearnTrainer(models.SVMWithScalar("jensen_shannon"), data_name="question_and_js_top" + str(N_words), n_samples=5)
         trainer.train(data.train, data.dev)
         
@@ -247,10 +248,10 @@ if __name__ == '__main__':
         top_words = [item[0] for item in Counter(all_words).most_common(N_words)]
         data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
         data = add_cosine_similarity(data, stopwords=top_words)
-        print("LR Q+E using cosine similarity with %d most common words" % N_words)
+        log_info("Running LR Q+E using cosine similarity with %d most common words" % N_words)
         trainer = SklearnTrainer(models.LogisticWithScalar("cosine_similarity"), data_name="question_and_similarity_top" + str(N_words), n_samples=5)
         trainer.train(data.train, data.dev)
-        print("SVM Q+E using cosine similarity with %d most common words" % N_words)
+        log_info("Running SVM Q+E using cosine similarity with %d most common words" % N_words)
         trainer = SklearnTrainer(models.SVMWithScalar("cosine_similarity"), data_name="question_and_similarity_top" + str(N_words), n_samples=5)
         trainer.train(data.train, data.dev)
 
@@ -259,11 +260,11 @@ if __name__ == '__main__':
     data = read_dataset_splits(reader=data_readers.read_question_only_data)
     data = add_question_length(data)
 
-    print("LR Q+L")
+    log_info("Running LR Q+L")
     trainer = SklearnTrainer(models.LogisticWithScalar("question_length"), data_name="question_and_length", n_samples=5)
     trainer.train(data.train, data.dev)
     
-    print("SVM Q+L")
+    log_info("Running SVM Q+L")
     trainer = SklearnTrainer(models.SVMWithScalar("question_length"), data_name="question_and_length", n_samples=5)
     trainer.train(data.train, data.dev)
     
@@ -271,11 +272,11 @@ if __name__ == '__main__':
 
     data = read_dataset_splits(reader=data_readers.read_question_and_sentiment_data)
     
-    print("LR Q+S")
+    log_info("Running LR Q+S")
     trainer = SklearnTrainer(models.LogisticWithScalar("question_sentiment"), data_name="question_and_sentiment", n_samples=5)
     trainer.train(data.train, data.dev)
     
-    print("SVM Q+S")
+    log_info("Running SVM Q+S")
     trainer = SklearnTrainer(models.SVMWithScalar("question_sentiment"), data_name="question_and_sentiment", n_samples=5)
     trainer.train(data.train, data.dev)
     
@@ -296,11 +297,11 @@ if __name__ == '__main__':
 
     data = read_dataset_splits(reader=data_readers.read_question_and_duration_data)
     
-    print("SVM Q+D")
+    log_info("Running SVM Q+D")
     trainer = SklearnTrainer(models.SVMWithScalar("question_duration_sec"), data_name="question_and_duration", n_samples=5)
     trainer.train(data.train, data.dev)
     
-    print("LR Q+D")    
+    log_info("Running LR Q+D")    
     trainer = SklearnTrainer(models.LogisticWithScalar("question_duration_sec"), data_name="question_and_duration", n_samples=5)
     trainer.train(data.train, data.dev)
     
@@ -319,4 +320,4 @@ if __name__ == '__main__':
     #trainer = SklearnTrainer(models.Dummy, data_name="question_only", n_samples=1)
     #trainer.train(data.train, data.dev)
     
-    print('All models done!\n')
+    log_info('All models done!\n')
