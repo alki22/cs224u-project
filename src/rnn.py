@@ -127,7 +127,7 @@ def simpleRNN(embeddings, hidden_dim=100, dropout=0.1, recurrent_dropout=0.0):
 def evaluate(y_true, y_pred, name="tiny"):
     precision, recall, f1, support = precision_recall_fscore_support(y_true, y_pred, average='weighted')
 
-    directory = Path(os.path.join(Config.RUNS_DIR, "question_only", "simple_rnn", name))
+    directory = Path(os.path.join(Config.RUNS_DIR, "question_and_tldx", "simple_rnn", name))
     directory.mkdir(parents=True, exist_ok=True)
 
     with directory.joinpath("results").open(mode='w') as results_file:
@@ -146,7 +146,7 @@ def evaluate(y_true, y_pred, name="tiny"):
 
 
 if __name__ == "__main__":
-    data = read_dataset_splits(reader=data_readers.read_question_only_data, splits=["tiny", "train", "dev"])
+    data = read_dataset_splits(reader=data_readers.read_question_and_tldx_data, splits=["tiny", "train", "dev"])
     X_train, y_train = prepare_data(data.train)
     X_dev, y_dev = prepare_data(data.dev)
 
