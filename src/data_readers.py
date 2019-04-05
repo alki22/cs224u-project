@@ -103,6 +103,40 @@ def read_question_and_context_data(split="tiny", window_size=1, include_question
     log_info("Read %s data with %d rows" % (path.stem, data.shape[0]))
     return data
 
+def read_question_and_tldx_data(split="tiny", window_size=5, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=True):
+    assert window_size <= Config.MAX_CONTEXT_WINDOW_SIZE
+    dtypes = {"response_time_sec": np.int32, "session_id": np.int32, "question_duration_sec": np.int32, "question_length": np.int32}
+    converters = {}
+
+    if include_context_speaker:
+        for i in range(1, window_size+1):
+            dtypes["turn_speaker-%d" % i] = str
+
+    def to_float(t):
+        try:
+            return np.float32(t)
+        except:
+            return -1
+    if include_context_times:
+        for i in range(1, window_size+1):
+            converters["turn_time-%d" % i] = to_float
+
+    if include_question_text:
+        converters["question"] = ast.literal_eval
+
+    if include_context_text:
+        for i in range(1, window_size+1):
+            converters["turn_text-%d" % i] = ast.literal_eval
+
+    path = Config.QUESTION_AND_TLDX_DATASET_FILE(split)
+    data = pd.read_csv(path, sep=",", header=0, dtype=dtypes, converters=converters)
+
+    drop_columns = set(data.columns.values) - (set(dtypes.keys()) | set(converters.keys()))
+    data.drop(labels=drop_columns, axis="columns", inplace=True)
+
+    log_info("Read %s data with %d rows" % (path.stem, data.shape[0]))
+    return data
+
 def read_label_counts_data(split="tiny"):
     dtypes = {"response_time_sec": np.int32, "session_id": np.int32}
     converters = {"label_counts": ast.literal_eval}
