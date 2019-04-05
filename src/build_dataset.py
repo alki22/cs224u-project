@@ -10,7 +10,7 @@ from collections import defaultdict
 from config import Config
 from console import log_info, log_warning
 from enum import Enum
-from model_utils import get_response_time_label
+from model_utils import get_response_time_label, add_question_length
 from multiprocessing import Pool
 from pathlib import Path
 from stanfordcorenlp import StanfordCoreNLP
@@ -23,7 +23,8 @@ class Dataset(Enum):
     QUESTION_AND_DURATION= 7
     QUESTION_AND_NEWLINES = 8
     QUESTION_AND_SENTIMENT = 9
-    LABEL_COUNTS = 10
+    QUESTION_AND_TLDX = 10
+    LABEL_COUNTS = 11
 
 def build_question_only(split="tiny", concatenator=None):
     data = data_readers.read_corpus(split)
@@ -157,6 +158,49 @@ def build_question_with_context_window(split="tiny", window_size=0):
     dataset = pd.DataFrame.from_dict(columns)
     return dataset
 
+def build_question_and_tldx(split="tiny", window_size=5):
+    data = data_readers.read_corpus(split)
+    sessions = data_util.get_sessions(data)
+
+    questions = []
+    response_times_sec = []
+    session_ids = []
+    question_durations_sec = []
+    question_lengths = []
+    turn_texts = defaultdict(list)
+    turn_speakers = defaultdict(list)
+    turn_times = defaultdict(list)
+
+    for session in progressbar.progressbar(sessions):
+        for question, response in session.iter_question_and_response():
+            questions.append(question.row.text)
+            question_lengths.append(len(question.row.text))
+            response_times_sec.append((response.row.created_at - question.row.created_at).seconds)
+            question_durations_sec.append(question.duration)
+            session_ids.append(session.id)
+
+            times = defaultdict(lambda: 0)
+            texts = defaultdict(lambda: [])
+            speakers = defaultdict(lambda: Config.EMPTY_TAG)
+            prev = question.row.created_at
+            for i, turn in enumerate(session.iter_turns(start_row=question.index, num_turns=window_size+1, direction=-1)):
+                texts[i] = turn.text
+                speakers[i] = turn.sent_from
+                times[i] = int((prev - turn.created_at).seconds)
+                prev = turn.created_at
+
+            for i in range(1, window_size+1):
+                turn_texts["turn_text-%d" % i].append(texts[i])
+                turn_speakers["turn_speaker-%d" % i].append(speakers[i])
+                turn_times["turn_time-%d" % i].append(times[i])
+
+    columns = {"session_id": session_ids, "question": questions, "question_length": question_lengths, 
+                    "question_duration_sec": question_durations_sec, "response_time_sec": response_times_sec}
+    columns.update(turn_texts)
+    columns.update(turn_speakers)
+    columns.update(turn_times)
+    dataset = pd.DataFrame.from_dict(columns)
+    return dataset
 
 def build_question_text_and_response_text(split="tiny"):
     data = data_readers.read_corpus(split)
@@ -216,6 +260,7 @@ if __name__ == "__main__":
                 Dataset.QUESTION_AND_NEWLINES: lambda split: build_question_only(split, concatenator="\n"),
                 Dataset.QUESTION_AND_CONTEXT_WINDOW: lambda split: build_question_with_context_window(split, window_size=Config.MAX_CONTEXT_WINDOW_SIZE),
                 Dataset.QUESTION_TEXT_AND_RESPONSE_TEXT: build_question_text_and_response_text,
+                Dataset.QUESTION_AND_TLDX: build_question_and_tldx,
                 Dataset.LABEL_COUNTS: build_label_counts}
 
     log_info("Building the %s dataset" % args.dataset.name.lower())
