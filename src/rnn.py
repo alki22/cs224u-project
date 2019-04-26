@@ -127,7 +127,7 @@ def simpleRNN(embeddings, hidden_dim=100, dropout=0.1, recurrent_dropout=0.0):
 def evaluate(y_true, y_pred, name="tiny"):
     precision, recall, f1, support = precision_recall_fscore_support(y_true, y_pred, average='weighted')
 
-    directory = Path(os.path.join(Config.RUNS_DIR, "question_and_tldx", "simple_rnn", name))
+    directory = Path(os.path.join(Config.RUNS_DIR, "question_and_ltdx_data", "simple_rnn", name))
     directory.mkdir(parents=True, exist_ok=True)
 
     with directory.joinpath("results").open(mode='w') as results_file:
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     with open("history.pkl", "wb") as history:
         pickle.dump(res.history, history)
 
-    # summarize history for loss
+    # Summarize history for loss
     plt.plot(res.history['loss'])
     plt.plot(res.history['val_loss'])
     plt.title('Model Loss')

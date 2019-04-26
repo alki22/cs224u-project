@@ -103,7 +103,7 @@ def read_question_and_context_data(split="tiny", window_size=1, include_question
     log_info("Read %s data with %d rows" % (path.stem, data.shape[0]))
     return data
 
-def read_question_and_tldx_data(split="tiny", window_size=5, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=True):
+def read_question_and_tldx_data(split="tiny", window_size=5, include_question_text=True, include_context_text=True, include_context_speaker=True, include_context_times=True):
     assert window_size <= Config.MAX_CONTEXT_WINDOW_SIZE
     dtypes = {"response_time_sec": np.int32, "session_id": np.int32, "question_duration_sec": np.int32, "question_length": np.int32}
     converters = {}

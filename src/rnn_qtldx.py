@@ -6,6 +6,7 @@ import random
 
 from collections import defaultdict
 from config import Config
+from console import log_info
 from data_readers import read_dataset_splits
 from keras.callbacks import Callback
 from keras.layers import Dense, Embedding, Input, LSTM, Bidirectional
@@ -147,21 +148,25 @@ if __name__ == "__main__":
     data = read_dataset_splits(reader=data_readers.read_question_and_tldx_data, splits=["tiny", "train", "dev"], window_size=WINDOW_SIZE, include_question_text=True, include_context_text=True, include_context_speaker=True, include_context_times=True)
     X_train, y_train = prepare_data(data.train)
     X_dev, y_dev = prepare_data(data.dev)
-
+    log_info("Datasets built!")
     tokenizer = Tokenizer(num_words=MAX_NUM_WORDS, oov_token="<UNK>", split=' ', lower=True)
     tokenizer.fit_on_texts(X_train)
-
+    log_info("Tokenizing done!")
     embeddings = getFastTextEmbeddings(tokenizer.word_index)
-
+    log_info("Embeddings done!")
     model = simpleRNN(embeddings, hidden_dim=200)
-
+    log_info("RNN initialized!")
     X_train = tokenizer.texts_to_sequences(X_train)
+    log_info("X_train sequences done!")
     X_dev = tokenizer.texts_to_sequences(X_dev)
-
+    log_info("X_dev sequences done!")
     X_train = pad_sequences(X_train, maxlen=MAX_CONV_LEN)
+    log_info("X_train padded!")
     X_dev = pad_sequences(X_dev, maxlen=MAX_CONV_LEN)
-
+    log_info("X_dev padded!")
     class_weight = defaultdict(int)
+    log_info("class_weight done!")
+
     for label in y_train:
         class_weight[label] += 1
     tot = sum(class_weight.values())
