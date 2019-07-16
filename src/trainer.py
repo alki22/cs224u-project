@@ -84,9 +84,10 @@ class SklearnTrainer(object):
             print(self.best_params, file=params_file)   
 
 if __name__ == '__main__':
+    """
     data = read_dataset_splits(reader=data_readers.read_question_and_response_data)
     texts = ['response']
-
+    
     # Question text + Response Text (A) Models
 
     log_info("Running SVM Q+A")
@@ -130,7 +131,7 @@ if __name__ == '__main__':
     
     # Doubtful about whether it is Q+D or not because of the ctime on its data name
 
-    """
+
     print("SVM Q+D")
     model = models.SVMWithScalars(scalars)
     trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime", n_samples=5)
@@ -140,19 +141,19 @@ if __name__ == '__main__':
     model = models.LogisticWithScalars(scalars)
     trainer = SklearnTrainer(model, data_name="combined_length_duration_ctime", n_samples=5)
     trainer.train(data.train, data.dev)
-    """
+
 
     scalars = ["turn_time-%d" % i for i in range(1, window_size+1)]
     scalars += ["question_length"]
     
-    """
+
     trainer = SklearnTrainer(model, data_name="combined_length_ctime", n_samples=5)
     trainer.train(data.train, data.dev)
     
     model = models.LogisticWithScalars(scalars)
     trainer = SklearnTrainer(model, data_name="combined_length_ctime", n_samples=5)
     trainer.train(data.train, data.dev)
-    """
+
 
     
     # Label Count Models
@@ -208,7 +209,7 @@ if __name__ == '__main__':
 
 
     # Commented since we use the 25, 50 and 100 most common words in the paper
-    """
+
     data = read_dataset_splits(reader=data_readers.read_question_and_context_data, window_size=10, include_question_text=True, include_context_text=True, include_context_speaker=False, include_context_times=False)
     data = add_jensen_shannon(data)
     
@@ -219,7 +220,7 @@ if __name__ == '__main__':
     print("LR Q+E using Jensen-Shannon divergence")
     trainer = SklearnTrainer(models.SVMWithScalar("jensen_shannon"), data_name="question_and_js", n_samples=5)
     trainer.train(data.train, data.dev)
-    """
+
     
     df = read_corpus(split='train')
     all_words = [item for sublist in df.text for item in sublist]
@@ -319,5 +320,51 @@ if __name__ == '__main__':
     #trainer.train(data.train, data.dev)
     #trainer = SklearnTrainer(models.Dummy, data_name="question_only", n_samples=1)
     #trainer.train(data.train, data.dev)
+    """
+    # Question text + Question duration (D)
+    """
+    data = read_dataset_splits(reader=data_readers.read_question_and_payment_info_data)
     
+    log_info("Running SVM Q+P")
+    trainer = SklearnTrainer(models.SVMWithScalar("has_payment_info"), data_name="question_and_payment_info_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    log_info("Running LR Q+P")    
+    trainer = SklearnTrainer(models.LogisticWithScalar("has_payment_info"), data_name="question_and_payment_info_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+
+    # Question text + Tutor's last sign in country (C)
+
+    data = read_dataset_splits(reader=data_readers.read_question_and_tutor_country_data)
+
+    log_info("Running SVM Q+C")
+    trainer = SklearnTrainer(models.SVMWithScalar("tutor_country"), data_name="question_and_tutor_country_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    log_info("Running LR Q+C")    
+    trainer = SklearnTrainer(models.LogisticWithScalar("tutor_country"), data_name="question_and_tutor_country_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+
+    # Question text + Tutor's grade(G)
+    data = read_dataset_splits(reader=data_readers.read_question_and_tutor_score_data)
+
+    log_info("Running SVM Q+G")
+    trainer = SklearnTrainer(models.SVMWithScalar("tutor_score"), data_name="question_and_tutor_score_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    log_info("Running LR Q+G")    
+    trainer = SklearnTrainer(models.LogisticWithScalar("tutor_score"), data_name="question_and_tutor_score_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+    """
+
+    data = read_dataset_splits(reader=data_readers.read_question_and_tutor_country_data)
+    print(data)
+    log_info("Running SVM Q+C")
+    trainer = SklearnTrainer(models.SVMWithScalar("tutor_country"), data_name="question_and_tutor_country_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    log_info("Running LR Q+C")    
+    trainer = SklearnTrainer(models.LogisticWithScalar("tutor_country"), data_name="question_and_tutor_country_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+
     log_info('All models done!\n')

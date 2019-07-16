@@ -91,7 +91,7 @@ def normalize_url(data):
     return data
 
 def parse_timestamps(data):
-    data.created_at = pd.to_datetime(data.created_at,format="%Y-%m-%d %H:%M:%S %Z")
+    data.created_at = pd.to_datetime(data.created_at,format="%Y-%m-%d %H:%M:%S")
     return data
 
 def tokenize_utterances(data):

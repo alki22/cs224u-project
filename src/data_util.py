@@ -101,7 +101,6 @@ class Session(object):
                 question_text = question_text[:-1]
             question.text = question_text
             duration = (self.rows.iloc[end - 1].created_at - self.rows.iloc[start].created_at).seconds
-
             prev_i = response_index
             yield IndexedRow(question_index, question, duration), IndexedRow(response_index, response)
         raise StopIteration

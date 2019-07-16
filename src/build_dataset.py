@@ -15,16 +15,21 @@ from multiprocessing import Pool
 from pathlib import Path
 from stanfordcorenlp import StanfordCoreNLP
 
+COUNTRY_TO_INDEX = {'NO_COUNTRY': 0, 'HUN': 1, 'USA': 2, 'US': 2, 'PHL': 3, 'KOR': 4, 'BIH': 5, 'CA': 6, 'SGP': 7, 'AR': 8, 'IN': 9, 'GBR': 10, 'SG': 11, 'VN': 12, 'JAM': 13, 'PH': 14, 'FRA': 15, 'PK': 16}
+
 class Dataset(Enum):
     QUESTION_ONLY = 1
     QUESTION_AND_CONTEXT_WINDOW = 2
-    QUESTION_TEXT_AND_RESPONSE_TEXT = 5 # TODO(siggi): rename to QUESTION_AND_RESPONSE
+    QUESTION_TEXT_AND_RESPONSE_TEXT = 5
     QUESTION_AND_INDEX = 6
     QUESTION_AND_DURATION= 7
     QUESTION_AND_NEWLINES = 8
     QUESTION_AND_SENTIMENT = 9
     QUESTION_AND_TLDX = 10
-    LABEL_COUNTS = 11
+    QUESTION_AND_PAYMENT_INFO = 11
+    QUESTION_AND_TUTOR_COUNTRY = 12
+    QUESTION_AND_TUTOR_SCORE = 13
+    LABEL_COUNTS = 14
 
 def build_question_only(split="tiny", concatenator=None):
     data = data_readers.read_corpus(split)
@@ -202,6 +207,87 @@ def build_question_and_tldx(split="tiny", window_size=5):
     dataset = pd.DataFrame.from_dict(columns)
     return dataset
 
+def build_question_and_payment_info(split="tiny"):
+    data = data_readers.read_corpus(split)
+    questions = []
+    response_times_sec = []
+    payment_infos = []
+    session_ids = []
+
+    sessions = data_util.get_sessions(data)
+    for session in progressbar.progressbar(sessions):
+        for question, response in session.iter_question_and_response():
+            session_payment_info = None
+            questions.append(question.row.text)
+            if (question.row.student_has_payment_info == True or question.row.student_has_payment_info == False):
+                payment_infos.append(question.row.student_has_payment_info)
+                session_payment_info = question.row.student_has_payment_info
+            elif (session_payment_info == None):
+                payment_infos.append(False)
+            else:
+                tutor_scores.append(session_payment_info)
+
+            response_times_sec.append((response.row.created_at - question.row.created_at).seconds)
+            session_ids.append(session.id)
+
+    dataset = pd.DataFrame.from_dict({"session_id": session_ids, "question": questions, "has_payment_info": payment_infos, "response_time_sec": response_times_sec})
+    return dataset
+
+def build_question_and_tutor_country(split="tiny"):
+    data = data_readers.read_corpus(split)
+    questions = []
+    response_times_sec = []
+    tutor_countries = []
+    session_ids = []
+
+    sessions = data_util.get_sessions(data)
+    for session in progressbar.progressbar(sessions):
+        for question, response in session.iter_question_and_response():
+            session_tutor_country = COUNTRY_TO_INDEX["NO_COUNTRY"]
+            questions.append(question.row.text)
+            if (type(question.row.tutor_last_sign_in_country) != str or not question.row.tutor_last_sign_in_country.isalpha() or question.row.tutor_last_sign_in_country in ["nan", "--"]):
+                tutor_countries.append(session_tutor_country) 
+            else:
+                tutor_countries.append(COUNTRY_TO_INDEX[question.row.tutor_last_sign_in_country])
+                session_tutor_country = COUNTRY_TO_INDEX[question.row.tutor_last_sign_in_country]
+
+            response_times_sec.append((response.row.created_at - question.row.created_at).seconds)
+            session_ids.append(session.id)
+    print(set(tutor_countries))
+    dataset = pd.DataFrame.from_dict({"session_id": session_ids, "question": questions, "tutor_country": tutor_countries, "response_time_sec": response_times_sec})
+    return dataset
+
+def build_question_and_tutor_score(split="tiny"):
+    data = data_readers.read_corpus(split)
+    questions = []
+    tutor_scores = []
+    response_times_sec = []
+    session_ids = []
+
+    sessions = data_util.get_sessions(data)
+    for session in progressbar.progressbar(sessions):
+        session_tutor_score = -1
+        for question, response in session.iter_question_and_response():
+            questions.append(question.row.text)
+            if (question.row.subject == "Math" and type(question.row.tutor_math_exam_score) is int):
+                tutor_scores.append(int(question.row.tutor_math_exam_score))
+                session_tutor_score = int(question.row.tutor_math_exam_score)
+            elif (question.row.subject == "Physics" and type(question.row.tutor_physics_exam_score) is int):
+                tutor_scores.append(int(question.row.tutor_physics_exam_score))
+                session_tutor_score = int(question.row.tutor_physics_exam_score)
+            elif (question.row.subject == "Chemistry" and type(question.row.tutor_chemistry_exam_score) is int):
+                tutor_scores.append(int(question.row.tutor_chemistry_exam_score))
+                session_tutor_score = int(question.row.tutor_chemistry_exam_score)
+            else:
+                tutor_scores.append(int(session_tutor_score))
+
+            response_times_sec.append((response.row.created_at - question.row.created_at).seconds)
+            session_ids.append(session.id)
+
+    print(len(session_ids), len(questions), len(tutor_scores), len(response_times_sec))
+    dataset = pd.DataFrame.from_dict({"session_id": session_ids, "question": questions, "tutor_score": tutor_scores, "response_time_sec": response_times_sec})
+    return dataset
+
 def build_question_text_and_response_text(split="tiny"):
     data = data_readers.read_corpus(split)
     questions = []
@@ -261,6 +347,9 @@ if __name__ == "__main__":
                 Dataset.QUESTION_AND_CONTEXT_WINDOW: lambda split: build_question_with_context_window(split, window_size=Config.MAX_CONTEXT_WINDOW_SIZE),
                 Dataset.QUESTION_TEXT_AND_RESPONSE_TEXT: build_question_text_and_response_text,
                 Dataset.QUESTION_AND_TLDX: build_question_and_tldx,
+                Dataset.QUESTION_AND_PAYMENT_INFO: build_question_and_payment_info,
+                Dataset.QUESTION_AND_TUTOR_COUNTRY: build_question_and_tutor_country,
+                Dataset.QUESTION_AND_TUTOR_SCORE: build_question_and_tutor_score,
                 Dataset.LABEL_COUNTS: build_label_counts}
 
     log_info("Building the %s dataset" % args.dataset.name.lower())

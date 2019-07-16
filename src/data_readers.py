@@ -20,6 +20,20 @@ def read_corpus(split=None):
     log_info("Read %s corpus with %d rows" % (split, data.shape[0]))
     return data
 
+def read_corpus_and_payment_info(split=None):
+    dtypes = {'session_id': np.int32, 'created_at': object, 'sent_from': str, 'sent_to': str, 'content_type': str, 'student_has_payment_info': bool}
+    converters = {"text":ast.literal_eval}
+    if split is None:
+        path = Config.CORPUS_FILE
+        split = "entire"
+    else:
+        path = Config.CORPUS_SPLIT_FILE(split)
+
+    data = pd.read_csv(path, sep=",", header=0, dtype=dtypes, parse_dates=["created_at"], converters=converters)
+
+    log_info("Read %s corpus with %d rows" % (split, data.shape[0]))
+    return data
+
 def read_question_only_data(split="tiny"):
     dtypes = {"response_time_sec": np.int32, "session_id": np.int32}
     converters = {"question": ast.literal_eval}
@@ -135,6 +149,30 @@ def read_question_and_tldx_data(split="tiny", window_size=5, include_question_te
     data.drop(labels=drop_columns, axis="columns", inplace=True)
 
     log_info("Read %s data with %d rows" % (path.stem, data.shape[0]))
+    return data
+
+def read_question_and_payment_info_data(split="tiny"):
+    dtypes = {"response_time_sec": np.int32, "session_id": np.int32, "has_payment_info": np.bool}
+    converters = {"question": ast.literal_eval}
+    path = Config.QUESTION_AND_PAYMENT_INFO_DATASET_FILE(split)
+    data = pd.read_csv(path, sep=",", header=0, dtype=dtypes, converters=converters)
+    log_info("read %s data with %d rows" % (path.stem, data.shape[0]))
+    return data
+
+def read_question_and_tutor_country_data(split="tiny"):
+    dtypes = {"response_time_sec": np.int32, "session_id": np.int32, "tutor_country": np.int32}
+    converters = {"question": ast.literal_eval}
+    path = Config.QUESTION_AND_TUTOR_COUNTRY_DATASET_FILE(split)
+    data = pd.read_csv(path, sep=",", header=0, dtype=dtypes, converters=converters)    
+    log_info("read %s data with %d rows" % (path.stem, data.shape[0]))
+    return data
+
+def read_question_and_tutor_score_data(split="tiny"):
+    dtypes = {"response_time_sec": np.int32, "session_id": np.int32, "tutor_score": np.int32}
+    converters = {"question": ast.literal_eval}
+    path = Config.QUESTION_AND_TUTOR_SCORE_DATASET_FILE(split)
+    data = pd.read_csv(path, sep=",", header=0, dtype=dtypes, converters=converters)
+    log_info("read %s data with %d rows" % (path.stem, data.shape[0]))
     return data
 
 def read_label_counts_data(split="tiny"):
