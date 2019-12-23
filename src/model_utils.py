@@ -12,12 +12,14 @@ import base64
 import itertools
 import re
 
+from functools import reduce
 from unicodedata import normalize
 from config import Config
 from scipy import stats
 from spacy.lang.en.stop_words import STOP_WORDS
 from scipy.spatial.distance import cosine
 from scipy.stats import entropy
+from sklearn.externals import joblib
 
 SEED = Config.SEED
 random.seed(SEED)
@@ -53,6 +55,16 @@ def add_question_length(data):
         value['question_length'] = value.apply(lambda row:
             len(row['question']), axis=1)
     
+    return data
+
+def add_cr_prediction(data):
+    '''
+        Add clarification request prediction as a feature.
+    '''
+    clf = joblib.load(Config.SVM_CR_CLASSIFIER_MODEL)
+    for key, value in data.items():
+        value['cr_prediction'] = clf.predict(value[['question']])
+
     return data
 
 def calc_distance_metric(row, stopwords=STOP_WORDS, metric='cosine_sim'):
