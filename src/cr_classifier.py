@@ -1,3 +1,4 @@
+import ast
 import data_readers
 import models
 import numpy as np
@@ -11,19 +12,22 @@ from console import log_info
 from data_readers import read_dataset_splits, read_corpus
 from dotdict import DotDict
 from functools import reduce
+from imblearn.under_sampling import RandomUnderSampler
 from model_utils import get_response_time_label, add_cosine_similarity, add_question_length, add_jensen_shannon, plot_cm, dummy_tokenizer
 from pathlib import Path
 from progressbar import progressbar
 from sklearn.externals import joblib
 from sklearn.metrics import confusion_matrix, classification_report, precision_recall_fscore_support, f1_score
-from sklearn.model_selection import ParameterSampler
+from sklearn.model_selection import ParameterSampler, train_test_split
 
 random.seed(Config.SEED)
 
-def prepare_data(data):
-    y = data.apply(lambda x: 1 if '?' in x.response else 0, axis=1)
-    X = data.drop(columns="response_time_sec").to_dict(orient="list")
-    return X, y
+def read_dataset(filename):
+    dtypes = {"response_time_sec": np.int32, "session_id": np.int32}
+    converters = {"question": ast.literal_eval, "response": ast.literal_eval}
+    path = filename
+    data = pd.read_csv(path, sep=",", header=0, dtype=dtypes, converters=converters)
+    return data
 
 class SklearnTrainer(object):
     def __init__(self, model, data_name,  n_samples):
@@ -34,18 +38,40 @@ class SklearnTrainer(object):
         self.models_directory.mkdir(parents=True, exist_ok=True)
         self.params_sampler = ParameterSampler(model.params_range, n_iter=n_samples, random_state=Config.SEED)
 
-    def train(self, train_data, dev_data):
-        X_train, y_train  = prepare_data(train_data)
-        X_dev, y_dev  = prepare_data(dev_data)
+    def train(self):
+        dataset_path = '../data/'
+
+        train_df = read_dataset(dataset_path + 'train_question_text_and_response_text_dataset.csv')
+        test_df = read_dataset(dataset_path + 'test_question_text_and_response_text_dataset.csv')
+        dev_df = read_dataset(dataset_path + 'dev_question_text_and_response_text_dataset.csv')
+        tiny_df = read_dataset(dataset_path + 'tiny_question_text_and_response_text_dataset.csv')
+
+        data = pd.concat([train_df,test_df,dev_df,tiny_df])
+        data = data.reset_index(drop=True)
+
+        y = data.apply(lambda x: 1 if '?' in x.response else 0, axis=1)
+        X = data.drop(columns="response_time_sec")
+
         self.best_clf = None
         self.best_params = None
         best_f1 = 0
 
+        #Balance dataset and split
+        random_under_sampler = RandomUnderSampler()
+        X, y = random_under_sampler.fit_resample(X, y)
+        print('Resampled dataset shape %s' % Counter(y))
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=Config.SEED)
+
+
+        X_train.to_dict(orient="list")
+        X_test.to_dict(orient="list")
+
         for params in progressbar(self.params_sampler):
             clf = self.pipe.set_params(**params)
             clf.fit(X_train, y_train)
-            preds = clf.predict(X_dev)
-            f1 = f1_score(y_dev, preds, average='weighted')
+            preds = clf.predict(X_test)
+            f1 = f1_score(y_test, preds, average='weighted')
             print("\tTrain F1: %.2f" % f1_score(y_train, clf.predict(X_train), average='weighted'))
             print("\tDev F1: %.2f" % f1)
             if f1 > best_f1:
@@ -55,7 +81,7 @@ class SklearnTrainer(object):
 
         joblib.dump(self.best_clf, self.models_directory.joinpath('clf.sav'))
         self.eval(X_train, y_train, split="train")
-        self.eval(X_dev, y_dev, split="test")
+        self.eval(X_test, y_test, split="test")
 
     def eval(self, X, y, split="tiny"):
         assert self.best_clf is not None
@@ -85,14 +111,10 @@ class SklearnTrainer(object):
             print(self.best_params, file=params_file)   
 
 if __name__ == '__main__':
-    data = read_dataset_splits(reader=data_readers.read_question_and_response_data)
-
-    print(type(data))
-    print(data)
 
     trainer = SklearnTrainer(models.SVM, data_name="cr_classifier", n_samples=5)
-    trainer.train(data.train, data.test)
+    trainer.train()
 
     trainer2 = SklearnTrainer(models.Logistic, data_name="cr_classifier", n_samples=5)
-    trainer2.train(data.train, data.test)
+    trainer2.train()
 
