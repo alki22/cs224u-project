@@ -11,7 +11,7 @@ from console import log_info
 from data_readers import read_dataset_splits, read_corpus
 from dotdict import DotDict
 from functools import reduce
-from model_utils import get_response_time_label, add_cosine_similarity, add_question_length, add_jensen_shannon, plot_cm
+from model_utils import get_response_time_label, add_cosine_similarity, add_question_length, add_jensen_shannon, add_cr_prediction, plot_cm, dummy_tokenizer
 from pathlib import Path
 from progressbar import progressbar
 from sklearn.externals import joblib
@@ -355,7 +355,7 @@ if __name__ == '__main__':
     log_info("Running LR Q+G")    
     trainer = SklearnTrainer(models.LogisticWithScalar("tutor_score"), data_name="question_and_tutor_score_data", n_samples=5)
     trainer.train(data.train, data.dev)
-    """
+    
 
     data = read_dataset_splits(reader=data_readers.read_question_and_tutor_country_data)
     print(data)
@@ -365,6 +365,18 @@ if __name__ == '__main__':
     
     log_info("Running LR Q+C")    
     trainer = SklearnTrainer(models.LogisticWithScalar("tutor_country"), data_name="question_and_tutor_country_data", n_samples=5)
+    trainer.train(data.train, data.dev)
+    """
+    data = read_dataset_splits(reader=data_readers.read_question_only_data)
+    data = add_cr_prediction(data)
+    data = add_question_length(data)
+
+    log_info("Running LR Q+C")
+    trainer = SklearnTrainer(models.LogisticWithScalars(["cr_prediction"]), data_name="question_question_length_and_cr_prediction", n_samples=5)
+    trainer.train(data.train, data.dev)
+    
+    log_info("Running SVM Q+C")
+    trainer = SklearnTrainer(models.SVMWithScalars(["cr_prediction"]), data_name="question_question_length_and_cr_prediction", n_samples=5)
     trainer.train(data.train, data.dev)
 
     log_info('All models done!\n')
