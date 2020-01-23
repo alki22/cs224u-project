@@ -56,6 +56,7 @@ class F1_Score(Callback):
 def prepare_data(data):
     y = data.response_time_sec.apply(get_response_time_label).apply(lambda label: LABEL_TO_INDEX[label]).values
     X = data.question.apply(lambda sent: " ".join(sent)).values #drop(columns="response_time_sec").to_dict(orient="list")
+
     return X, y
 
 def randvec(w, n=50, lower=-1.0, upper=1.0):
@@ -193,6 +194,3 @@ if __name__ == "__main__":
 
     evaluate(y_train, train_preds, name="train")
     evaluate(y_dev, dev_preds, name="dev")
-
-
-

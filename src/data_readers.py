@@ -189,6 +189,13 @@ def read_dataset_splits(splits=Config.SPLITS, reader=read_question_only_data, **
         data[split] = reader(split, **kwargs)
     return DotDict(data)
 
+def read_dataset(filename):
+    dtypes = {"response_time_sec": np.int32, "session_id": np.int32}
+    converters = {"question": ast.literal_eval, "response": ast.literal_eval}
+    path = filename
+    data = pd.read_csv(path, sep=",", header=0, dtype=dtypes, converters=converters)
+    return data
+
 if __name__ == "__main__":
     #data = read_corpus()
     #print(data.sent_from.unique())
