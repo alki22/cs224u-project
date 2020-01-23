@@ -6,7 +6,8 @@ class Config:
     RUNS_DIR = Path(join(BASE_DIR, "runs"))
     DATA_DIR = Path(join(BASE_DIR, "data"))
     MODELS_DIR = Path(join(BASE_DIR, "models"))
-    CORPUS_FILE = Path(join(DATA_DIR, "new_dataset_preprocessed.csv"))
+    CORPUS_FILE = Path(join(DATA_DIR, "yup-messages-2017-06-29.csv"))
+    #CORPUS_FILE = Path(join(DATA_DIR, "new_dataset_preprocessed.csv"))
     FASTTEXT_FILE = Path(join(DATA_DIR, "fasttext", "wiki.en.vec")) 
     CORE_NLP_DIR = join(BASE_DIR, "stanford-corenlp-full-2018-10-05")
     BASELINE_PREDS_FILE = Path(join(DATA_DIR, "dev_baseline_predictions_logreg.csv"))
@@ -18,7 +19,8 @@ class Config:
             return Path(join(Config.DATA_DIR, fmt % split))
         return split_file
 
-    CORPUS_SPLIT_FILE = _lift_split_file("%s_new_dataset_preprocessed.csv") #default=CORPUS_SPLIT_FILE = _lift_split_file("%s_yup_messages_preprocessed.csv")
+    CORPUS_SPLIT_FILE = _lift_split_file("%s_yup-messages-2017-06-29_preprocessed.csv")
+    #CORPUS_SPLIT_FILE = _lift_split_file("%s_new_dataset_preprocessed.csv") #default=CORPUS_SPLIT_FILE = _lift_split_file("%s_yup_messages_preprocessed.csv")
     QUESTION_ONLY_DATASET_FILE = _lift_split_file("%s_question_only_dataset.csv")
     QUESTION_AND_INDEX_DATASET_FILE = _lift_split_file("%s_question_and_index_dataset.csv")
     QUESTION_AND_DURATION_DATASET_FILE = _lift_split_file("%s_question_and_duration_dataset.csv")
@@ -35,6 +37,7 @@ class Config:
 
     LR_CR_CLASSIFIER_MODEL = Path(join(MODELS_DIR, "cr_classifier", "logistic", "clf.sav"))
     SVM_CR_CLASSIFIER_MODEL = Path(join(MODELS_DIR, "cr_classifier", "svm", "clf.sav"))
+    RNN_CR_CLASSIFIER_MODEL = Path(join(MODELS_DIR, "cr_classifier", "rnn", "clf.sav"))
 
     MAX_CONTEXT_WINDOW_SIZE = 10
     QUESTION_AND_CONTEXT_WINDOW_DATASET_FILE = _lift_split_file("%s_question_and_context_window_dataset.csv")
