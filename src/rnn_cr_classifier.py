@@ -57,6 +57,11 @@ class F1_Score(Callback):
         return
 
 def prepare_data(data):
+    y = data['cr'].values
+    X = data.question.apply(lambda sent: " ".join(sent)).values #drop(columns="response_time_sec").to_dict(orient="list")
+    return X, y
+
+def prepare_train_data(data):
     data['cr'] = data.apply(lambda x: 1 if '?' in x.response else 0, axis=1)
     
     cr_df = data[data.cr == 1]
@@ -65,8 +70,8 @@ def prepare_data(data):
     data = pd.concat([cr_df, non_cr_df])
     data = data.reset_index(drop=True)
 
-    y = data['cr'].values
-    X = data.question.apply(lambda sent: " ".join(sent)).values #drop(columns="response_time_sec").to_dict(orient="list")
+    X, y = prepare_data(data)
+
     return X, y
 
 def randvec(w, n=50, lower=-1.0, upper=1.0):
@@ -156,7 +161,7 @@ def evaluate(y_true, y_pred, name="tiny"):
 
 if __name__ == "__main__":
     data = read_dataset_splits(reader=data_readers.read_question_and_response_data, splits=["tiny", "train", "dev"])
-    X_train, y_train = prepare_data(data.train)
+    X_train, y_train = prepare_train_data(data.train)
     X_dev, y_dev = prepare_data(data.dev)
 
     tokenizer = Tokenizer(num_words=MAX_NUM_WORDS, oov_token="<UNK>", split=' ', lower=True)
